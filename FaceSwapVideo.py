@@ -1,7 +1,7 @@
 #!/usr/bin/evn python
 
 """
-@file    FaceSwapImage.py
+@file    FaceSwapVideo.py
 @author  rohithjayarajan
 @date 02/25/2019
 
@@ -20,12 +20,10 @@ debug = False
 
 
 class FaceSwap:
-    def __init__(self, Image_Path_1, Image_Path_2, ModelPath):
+    def __init__(self, Image_Path, ModelPath):
         self.ModelPath = ModelPath
         # ImageTemp = cv2.resize(ImageTemp, (1000, 800))
-        InputImageList = [cv2.imread(Image_Path_1), cv2.imread(Image_Path_2)]
-        self.Images = np.array(InputImageList)
-        self.NumImages = len(InputImageList)
+        self.Image = cv2.imread(Image_Path)
         self.FaceDetector = dlib.get_frontal_face_detector()
         self.ShapePredictor = dlib.shape_predictor(self.ModelPath)
         self.HelperFunctions = ImageUtils()
@@ -62,7 +60,7 @@ class FaceSwap:
             a = (triangle[0], triangle[1])
             b = (triangle[2], triangle[3])
             c = (triangle[4], triangle[5])
-            if(self.HelperFunctions.isGoodAngle(a, b, c)):
+            if(self.HelperFunctions.isGoodAngle(a, b, c, 140)):
                 DelaunayTriangleListN.append(triangle)
         DelaunayTriangleListN = np.array(DelaunayTriangleListN)
 
@@ -126,9 +124,9 @@ class FaceSwap:
         return cv2.seamlessClone(
             TargetImg, SrcImg, Mask, center, cv2.NORMAL_CLONE)
 
-    def FaceWarpByTriangulation(self, weight):
-        TargetImg = self.Images[0]
-        SrcImg = self.Images[1]
+    def FaceWarpByTriangulation(self, frame, weight):
+        TargetImg = frame
+        SrcImg = self.Image
         CloneSrcImg = TargetImg.copy()
         Mask = np.zeros(TargetImg.shape, TargetImg.dtype)
 
@@ -172,12 +170,13 @@ class FaceSwap:
             self.HelperFunctions.ShowImage(TargetImg, 'Target Image')
             self.HelperFunctions.ShowImage(CloneSrcImg, 'Source Image')
             FaceSwapOP = cv2.resize(FaceSwapOP, (720, 720))
-        self.HelperFunctions.ShowImage(
-            FaceSwapOP, 'FaceSwap using Delaunay Triangulation')
+        # self.HelperFunctions.ShowImage(
+        #     FaceSwapOP, 'FaceSwap using Delaunay Triangulation')
+        return FaceSwapOP
 
-    def FaceWarpByTPS(self):
-        TargetImg = self.Images[0]
-        SrcImg = self.Images[1]
+    def FaceWarpByTPS(self, frame):
+        TargetImg = frame
+        SrcImg = self.Image
         CloneSrcImg = TargetImg.copy()
 
         _, LandMarkPointsTarget = self.DetectFacialLandmarks(
@@ -265,31 +264,77 @@ class FaceSwap:
             wUY = np.matmul(np.transpose(wY), U1)
             fX = int(ax1 + axX*Lpts[0] + axY*Lpts[1] + wUX)
             fY = int(ay1 + ayX*Lpts[0] + ayY*Lpts[1] + wUY)
+            if fX < 0 or fY < 0:
+                continue
             TargetImg[Lpts[1]][Lpts[0]] = SrcImg[fY][fX]
 
         FaceSwapOP = self.Blending(TargetImg, CloneSrcImg, Mask)
-        self.HelperFunctions.ShowImage(
-            FaceSwapOP, 'FaceSwap using Thin Plate Spline')
+        # self.HelperFunctions.ShowImage(
+        #     FaceSwapOP, 'FaceSwap using Thin Plate Spline')
+        return FaceSwapOP
 
 
 def main():
     Parser = argparse.ArgumentParser()
-    Parser.add_argument('--Image_Path_1', default='/home/rohith/CMSC733/git/FaceSwap/Data/anakin.jpg',
-                        help='Image path of target image, Default:/home/rohith/CMSC733/git/FaceSwap/Data/hillary.jpeg')
-    Parser.add_argument('--Image_Path_2', default='/home/rohith/CMSC733/git/FaceSwap/Data/padme2.jpg',
-                        help='Image path of source image, Default:/home/rohith/CMSC733/git/FaceSwap/Data/trump.jpeg')
+    Parser.add_argument('--Video_Path', default='/home/rohith/CMSC733/git/FaceSwap/Data/elon.mp4',
+                        help='Video path, Default:/home/rohith/CMSC733/git/FaceSwap/Data/elon.mp4')
+    Parser.add_argument('--Image_Path', default='/home/rohith/CMSC733/git/FaceSwap/Data/padme2.jpeg',
+                        help='Image path, Default:/home/rohith/CMSC733/git/FaceSwap/Data/padme2.jpg')
     Parser.add_argument('--ModelPath', default='/home/rohith/CMSC733/git/FaceSwap/Models/shape_predictor_68_face_landmarks.dat',
                         help='Model path of dlib predictor, Default:/home/rohith/CMSC733/git/FaceSwap/Models/shape_predictor_68_face_landmarks.dat')
 
     Args = Parser.parse_args()
-    Image_Path_1 = Args.Image_Path_1
-    Image_Path_2 = Args.Image_Path_2
+    Video_Path = Args.Video_Path
+    Image_Path = Args.Image_Path
     ModelPath = Args.ModelPath
-    swapFaces1 = FaceSwap(Image_Path_1, Image_Path_2, ModelPath)
-    swapFaces1.FaceWarpByTriangulation(1)
+    cap = cv2.VideoCapture(Video_Path)
+    w = int(cap.get(3))
+    h = int(cap.get(4))
 
-    swapFaces2 = FaceSwap(Image_Path_1, Image_Path_2, ModelPath)
-    swapFaces2.FaceWarpByTPS()
+    print("**********Triangulation method started**********")
+    swapFaces1 = FaceSwap(Image_Path, ModelPath)
+    fourcc = cv2.VideoWriter_fourcc(*'XVID')
+    out1 = cv2.VideoWriter('Data3OutputTri.avi', fourcc, 20.0, (w, h))
+    while(cap.isOpened()):
+        ret, frame = cap.read()
+        if ret == True:
+            frame = swapFaces1.FaceWarpByTriangulation(frame, 1)
+            out1.write(frame)
+
+            # cv2.imshow('frame', frame)
+            # if cv2.waitKey(1) & 0xFF == ord('q'):
+            #     break
+        else:
+            break
+
+    # Release everything if job is finished
+    cap.release()
+    out1.release()
+    cv2.destroyAllWindows()
+    print("**********Triangulation method ended**********")
+    i = 0
+    print("**********TPS method started**********")
+    swapFaces2 = FaceSwap(Image_Path, ModelPath)
+    cap = cv2.VideoCapture(Video_Path)
+    out2 = cv2.VideoWriter('Data2OutputTPS.avi', fourcc, 20.0, (w, h))
+    while(cap.isOpened()):
+        ret, frame = cap.read()
+        if ret == True:
+            frame = swapFaces2.FaceWarpByTPS(frame)
+            out2.write(frame)
+            print(i)
+            i += 1
+            # cv2.imshow('frame', frame)
+            # if cv2.waitKey(1) & 0xFF == ord('q'):
+            #     break
+        else:
+            break
+
+    # Release everything if job is finished
+    cap.release()
+    out2.release()
+    cv2.destroyAllWindows()
+    print("**********TPS method ended**********")
 
 
 if __name__ == '__main__':

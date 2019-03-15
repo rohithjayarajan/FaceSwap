@@ -10,6 +10,7 @@ GNU General Public License v3.0
 import numpy as np
 import cv2
 from scipy import interpolate
+import math
 
 
 class ImageUtils:
@@ -74,3 +75,18 @@ class ImageUtils:
         interpG = fG(x, y)
         interpR = fR(x, y)
         return interpB, interpG, interpR
+
+    def distance(self, p1, p2):
+        return math.sqrt((p1[0]-p2[0])**2 + (p1[1]-p2[1])**2)
+
+    def isGoodAngle(self, p1, p2, p3, angleMax=160):
+        a = self.distance(p1, p2)
+        b = self.distance(p2, p3)
+        c = self.distance(p1, p3)
+        angleA = np.rad2deg(np.arccos((b**2 + c**2 - a**2)/(2*b*c)))
+        angleB = np.rad2deg(np.arccos((a**2 + c**2 - b**2)/(2*a*c)))
+        angleC = np.rad2deg(np.arccos((a**2 + b**2 - c**2)/(2*a*b)))
+
+        if angleA >= angleMax or angleB >= angleMax or angleC >= angleMax:
+            return False
+        return True
