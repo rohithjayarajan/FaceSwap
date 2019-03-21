@@ -21,11 +21,11 @@ from Misc.FaceSwapMethods import FaceSwapImages, FaceSwapVideoWithImage, FaceSwa
 
 def main():
     Parser = argparse.ArgumentParser()
-    Parser.add_argument('--Mode', default='1',
+    Parser.add_argument('--Mode', default='0',
                         help='FaceSwap Mode. 0: Swap faces in two images. 1: Swap largest face in video with user defined image. 2: Swap two faces in single video, Default:0')
     Parser.add_argument('--FaceSwapMethod', default='1',
                         help='FaceSwap FaceSwapMethod. 0: Triangulation. 1: Thin Plate Spline, Default:0')
-    Parser.add_argument('--Path1', default='/home/rohith/CMSC733/git/FaceSwap/Data/rohitk.webm',
+    Parser.add_argument('--Path1', default='/home/rohith/CMSC733/git/FaceSwap/Data/anakin2.jpg',
                         help='Video path for Mode 1 and 2. Target image for Mode 0, Default:/home/rohith/CMSC733/git/FaceSwap/Data/elon.mp4')
     Parser.add_argument('--Path2', default='/home/rohith/CMSC733/git/FaceSwap/Data/rohith.jpeg',
                         help='Image path to be swapped for Mode 0 and 1. Dont care for Mode2, Default:/home/rohith/CMSC733/git/FaceSwap/Data/padme2.jpg')
